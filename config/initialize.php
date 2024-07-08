@@ -9,4 +9,3 @@ include_once('utils/Request.php');
 include_once('utils/Response.php');
 include_once('utils/Router.php');
 include_once('controllers/UserController.php');
-

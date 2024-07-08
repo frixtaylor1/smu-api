@@ -7,6 +7,4 @@ include_once('config/initialize.php');
 $request  = new Request();
 $response = new Response();
 
-userRouter();
-
 Router::dispatch($request, $response);
