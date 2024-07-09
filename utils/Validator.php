@@ -5,18 +5,22 @@ declare(strict_types=1);
 include_once('ValidatorConstants.php');
 include_once('Request.php');
 
-class ValidatorResponse {    
+class ValidatorResponse
+{
     private $schemeErrors;
 
-    public function __construct(array $schemeErrors) {
+    public function __construct(array $schemeErrors)
+    {
         $this->schemeErrors = $schemeErrors;
     }
 
-    public function thereIsErrors(): bool {
+    public function thereIsErrors(): bool
+    {
         return !$this->schemeErrors['validation_scheme']['nb_errors'] == 0;
     }
 
-    public function getErrors(): ?array {
+    public function getErrors(): ?array
+    {
         return $this->schemeErrors['validation_scheme']['errors'];
     }
 }
@@ -89,6 +93,17 @@ class Validator
         return $this;
     }
 
+    public function isEmail(): ?self
+    {
+        if (isset($this->validationSqueme[$this->lastParamName]['type'])) {
+            throw new Error($this->redefinitionParamErrorMsgIn($this->lastParamName));
+        }
+
+        $this->lastIndexScheme = 'type';
+        $this->validationSqueme[$this->lastParamName]['type'] = ['value' => ValidatorConstants::TYPE_EMAIL];
+        return $this;
+    }
+
     public function isOptional(bool $value = true): ?self
     {
         if (isset($this->validationSqueme[$this->lastParamName]['optional'])) {
@@ -124,27 +139,37 @@ class Validator
         }
 
         foreach ($this->validationSqueme as $key => $scheme) {
-            $value = $params[$key] ?? null;
+            $value               = $params[$key] ?? null;
+            $type                = gettype($value);
+            $isOptional          = $scheme['optional']['value'];
+            $schemeValidatorType = $scheme['type']['value'];
 
-            if (!$scheme['optional']['value']) {
+            if ($isOptional && !$value && !isset($params[$key])) {
+                continue;
+            }
+
+            if (!$isOptional) {
                 if (!$value) {
                     $this->errors[$key] = [
-                        'message' => $scheme['optional']['message'] ?? 'This field is required',
+                        'message' => $scheme['optional']['message']
                     ];
                     $this->errorsCounter++;
                     continue;
                 }
             }
 
-            $schemeValidatorType = $scheme['type']['value'];
-
             if ($schemeValidatorType === ValidatorConstants::TYPE_INTEGER) {
                 if (is_numeric($value) && intval($value) == $value) {
                     $value = intval($value);
+                    $type  = ValidatorConstants::TYPE_INTEGER;
                 }
             }
 
-            if (gettype($value) !== $schemeValidatorType) {
+            if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                $type = ValidatorConstants::TYPE_EMAIL;
+            }
+
+            if ($type !== $schemeValidatorType || (isset($params[$key])) && !$value) {
                 $this->errorsCounter++;
                 $this->errors[$key]['type'] = [
                     'message' => $scheme['type']['message'] ?? "Invalid type, expected {$schemeValidatorType}",
@@ -154,7 +179,7 @@ class Validator
 
         return new ValidatorResponse([
             'validation_scheme' => [
-                'errors' => $this->errors,
+                'errors'    => $this->errors,
                 'nb_errors' => $this->errorsCounter
             ]
         ]);

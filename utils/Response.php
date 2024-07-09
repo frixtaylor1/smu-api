@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+include_once('Validator.php');
+
 class Response
 {
     private $statusCode;
@@ -54,6 +56,18 @@ class Response
         }
         http_response_code($this->getStatusCode());
         echo json_encode($this->getBody());
+        return;
+    }
+
+    public function sendValidationErrorResponse(ValidatorResponse $validatorResponse)
+    {
+        $this
+            ->setHeader('Content-Type', 'application/json')
+            ->setStatusCode(403)
+            ->setBody([
+                "errors" => json_encode($validatorResponse->getErrors())
+            ])
+            ->send();
         return;
     }
 }
