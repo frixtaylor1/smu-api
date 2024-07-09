@@ -8,6 +8,17 @@ include_once('Router.php');
 include_once('Validator.php');
 
 (function () {
+
+    /**
+     * @name Router Method.
+     *
+     * @APIDOC
+     * - @description get the users.
+     *
+     * - @method GET
+     *
+     * - @returns users
+     */
     Router::get(
         (new Route('/users'))->callback((function (Request $request, Response $response) {
 
@@ -25,6 +36,16 @@ include_once('Validator.php');
                         "errors" => json_encode($validatorResponse->getErrors())
                     ])->send();
                 return;
+            }
+
+            $host = getenv('MYSQL_HOST') ?: 'db';
+            $database = getenv('MYSQL_DATABASE');
+            $password = getenv('MYSQL_PASSWORD');
+            
+            $conn  = new mysqli($host, 'root', $password, $database, 3306);
+
+            if ($conn->connect_error) {
+                die("Connection failure: " . $conn->connect_error);
             }
 
             $response
@@ -51,33 +72,4 @@ include_once('Validator.php');
         //     return true;
         // }))
     );
-
-    Router::get((new Route('/users/{id}'))->callback(function (Request $request, Response $response) {
-        $validator = new Validator($request);
-        $errors = $validator
-            ->param('id')
-            ->isOptional(false)->withMessage('Must have this parameter')
-            ->isInteger()->withMessage('Must be an integer!')
-            ->param('name')
-            ->isOptional(false)
-            ->isString()->withMessage('Must be an integer!')
-            ->validate();
-
-        if ($errors["validation_scheme"]['nb_errors']) {
-            $response
-                ->setHeader('Content-Type', 'application/json')
-                ->setStatusCode(403)
-                ->setBody([
-                    "Message" => json_encode($errors)
-                ])->send();
-            return;
-        }
-
-        $response
-            ->setHeader('Content-Type', 'application/json')
-            ->setStatusCode(200)
-            ->setBody([
-                "Message" => "The user id is: {$request->getParam('id')}"
-            ])->send();
-    }));
 })();
