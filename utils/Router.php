@@ -3,76 +3,48 @@
 declare(strict_types=1);
 
 include_once('RouterConstants.php');
-
-class Route 
-{
-    private $middlewareCallback;
-    private $callback;
-
-    public function middleware(callable $callback): self {
-        $this->middlewareCallback = $callback;
-        return $this;
-    }
-
-    public function callback(callable $callback): self {
-        $this->callback = $callback;
-        return $this;
-    }
-
-    public function execute(Request $request, Response $response) {
-        if ($this->middlewareCallback) {       
-            $middlewareResult = call_user_func_array($this->middlewareCallback, [$request, $response]);
-            if (!$middlewareResult) {
-                return;
-            }
-        }
-        call_user_func_array($this->callback, [$request, $response]);
-    }
-}
+include_once('Route.php');
 
 class Router
 {
     private static $routes = [];
 
-    public static function get(string $path, Route $route): void
+    public static function get(Route $route): void
     {
-        self::addRoute('GET', $path, $route);
+        self::addRoute('GET', $route);
     }
 
-    public static function post(string $path, Route $route): void
+    public static function post(Route $route): void
     {
-        self::addRoute('POST', $path, $route);
+        self::addRoute('POST', $route);
     }
 
-    public static function put(string $path, Route $route): void
+    public static function put(Route $route): void
     {
-        self::addRoute('PUT', $path, $route);
+        self::addRoute('PUT', $route);
     }
 
-    public static function patch(string $path, Route $route): void
+    public static function patch(Route $route): void
     {
-        self::addRoute('PATCH', $path, $route);
+        self::addRoute('PATCH', $route);
     }
 
-    public static function delete(string $path, Route $route): void
+    public static function delete(Route $route): void
     {
-        self::addRoute('DELETE', $path, $route);
+        self::addRoute('DELETE', $route);
     }
 
     private static function convertPathToRegex(string $path): string
     {
-        return '#^' . preg_replace_callback('#\{([^\}]+)\}#', function($matches) {
+        return '#^' . preg_replace_callback('#\{([^\}]+)\}#', function ($matches) {
             return '([^/]+)';
         }, $path) . '$#';
     }
 
-    private static function addRoute(string $method, string $path, Route $route): void
+    private static function addRoute(string $method, Route $route): void
     {
-        $compiledRegex = self::convertPathToRegex($path);
-        self::$routes[$method][$compiledRegex] = [
-            'route' => $route,
-            'path'  => $path
-        ];
+        $compiledRegex = self::convertPathToRegex($route->getPath());
+        self::$routes[$method][$compiledRegex] = [$route];
     }
 
     public static function dispatch($request, $response): void
@@ -83,10 +55,10 @@ class Router
         if (isset(self::$routes[$method])) {
             foreach (self::$routes[$method] as $compiledRegex => $routeData) {
                 if (preg_match($compiledRegex, $path, $matches)) {
-                    $route = $routeData['route'];
-                    
+                    $route = $routeData[0];
+
                     $params = [];
-                    preg_match_all('#\{([^\}]+)\}#', $routeData['path'], $paramNames);
+                    preg_match_all('#\{([^\}]+)\}#', $route->getPath(), $paramNames);
                     foreach ($paramNames[1] as $index => $name) {
                         $params[$name] = $matches[$index + 1];
                     }

@@ -9,17 +9,12 @@ include_once('Validator.php');
 
 (function () {
     Router::get(
-        '/users',
-        (new Route())->callback((function (Request $request, Response $response) {
+        (new Route('/users'))->callback((function (Request $request, Response $response) {
 
             $validator = new Validator($request);
             $validatorResponse = $validator
-                ->param('id')
-                ->isOptional(false)->withMessage('Must have this parameter')
-                ->isInteger()->withMessage('Must be an integer!')
-                ->param('name')
-                ->isOptional(false)->withMessage('The parameter must be in the request')
-                ->isString()->withMessage('Must be an integer!')
+                ->param('id')->isOptional(false)->withMessage('Must have this parameter')->isInteger()->withMessage('Must be an integer!')
+                ->param('name')->isOptional(false)->withMessage('The parameter must be in the request')->isString()->withMessage('Must be an integer!')
                 ->validate();
 
             if ($validatorResponse->thereIsErrors()) {
@@ -42,6 +37,10 @@ include_once('Validator.php');
         }))
         // }))->middleware((function (Request $request, Response $response) {
         //     if (!$request->getHeader('Authorization')) {
+
+        //         /**
+        //          * Logic for auth... 
+        //          */
         //         $response
         //             ->setHeader('Content-Type', 'application/json')
         //             ->setStatusCode(401)
@@ -53,7 +52,7 @@ include_once('Validator.php');
         // }))
     );
 
-    Router::get('/users/{id}', (new Route())->callback(function (Request $request, Response $response) {
+    Router::get((new Route('/users/{id}'))->callback(function (Request $request, Response $response) {
         $validator = new Validator($request);
         $errors = $validator
             ->param('id')
