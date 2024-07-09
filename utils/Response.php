@@ -52,6 +52,7 @@ class Response
         foreach ($this->getHeaders() as $header) {
             header("{$header[0]}: {$header[1]}");
         }
+        http_response_code($this->getStatusCode());
         echo json_encode($this->getBody());
         return;
     }
