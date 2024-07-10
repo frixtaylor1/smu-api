@@ -16,12 +16,27 @@ class Route
         $this->path = $path;
     }
 
+    /**
+     * Middleware must return PREVENT_MAIN_CALLBACK_EXECUTION const
+     * if you want to prevent the execution of the callback method
+     *
+     * @params callable $callback
+     *
+     * @return self
+     */
     public function middleware(callable $callback): self
     {
         $this->middlewareCallback = $callback;
         return $this;
     }
 
+    /**
+     * Main handler callback of the endpoint.
+     *
+     * @params callable $callback
+     *
+     * @return self
+     */
     public function callback(callable $callback): self
     {
         $this->callback = $callback;
@@ -32,7 +47,7 @@ class Route
     {
         if ($this->middlewareCallback) {
             $middlewareResult = call_user_func_array($this->middlewareCallback, [$request, $response]);
-            if (!$middlewareResult) {
+            if ($middlewareResult === false) {
                 return;
             }
         }

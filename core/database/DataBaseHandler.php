@@ -1,4 +1,5 @@
 <?php
+
 class DatabaseManager
 {
     private static $instance = null;
@@ -12,6 +13,7 @@ class DatabaseManager
         $database = getenv('MYSQL_DATABASE');
         $port     = getenv('MYSQL_PORT');
 
+
         $this->conn = new mysqli(
             $host,
             $username,
@@ -19,7 +21,7 @@ class DatabaseManager
             $database,
             $port,
             null,
-            MYSQLI_CLIENT_FOUND_ROWS | MYSQLI_CLIENT_COMPRESS | MYSQLI_CLIENT_SSL | MYSQLI_CLIENT_IGNORE_SPACE | MYSQLI_CLIENT_INTERACTIVE | MYSQLI_CLIENT_IGNORE_SIGPIPE | MYSQLI_CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS | MYSQLI_CLIENT_NO_SCHEMA
+            MYSQLI_CLIENT_FOUND_ROWS | MYSQLI_CLIENT_COMPRESS | MYSQLI_CLIENT_SSL | MYSQLI_CLIENT_IGNORE_SPACE | MYSQLI_CLIENT_INTERACTIVE | MYSQLI_CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS | MYSQLI_CLIENT_NO_SCHEMA
         );
 
         if ($this->conn->connect_error) {

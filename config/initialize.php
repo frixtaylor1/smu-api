@@ -1,13 +1,21 @@
 <?php
 
-set_include_path(get_include_path() . PATH_SEPARATOR . __DIR__ . '/config');
-set_include_path(get_include_path() . PATH_SEPARATOR . __DIR__ . '/../utils');
-set_include_path(get_include_path() . PATH_SEPARATOR . __DIR__ . '/../constants');
-set_include_path(get_include_path() . PATH_SEPARATOR . __DIR__ . '/../controllers');
-set_include_path(get_include_path() . PATH_SEPARATOR . __DIR__ . '/../core/database');
-set_include_path(get_include_path() . PATH_SEPARATOR . __DIR__ . '/../core/ServerMessages');
+/**
+ * Presents the source directories for the includes...
+ */
+_setIncludePath('/config');
+_setIncludePath('/../utils');
+_setIncludePath('/../constants');
+_setIncludePath('/../controllers');
+_setIncludePath('/../core/database');
+_setIncludePath('/../core/ServerMessages');
+_setIncludePath('/../services');
 
-include_once('utils/Request.php');
-include_once('utils/Response.php');
-include_once('utils/Router.php');
-include_once('controllers/UserController.php');
+/**
+ * --------------------------------------------------------------------
+ * Private funcitons...
+ * --------------------------------------------------------------------
+ */
+function _setIncludePath(string $path) {
+    set_include_path(get_include_path() . PATH_SEPARATOR . __DIR__ . $path);
+}

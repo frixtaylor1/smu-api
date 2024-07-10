@@ -17,4 +17,6 @@ class RouterConstants
         self::METHOD_PATCH,
         self::METHOD_DELETE
     ];
+
+    public const PREVENT_MAIN_CALLBACK_EXECUTION = false;
 }

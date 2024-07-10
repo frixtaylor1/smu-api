@@ -16,12 +16,29 @@ class Route
         $this->path = $path;
     }
 
+    /**
+     * The callable function must return false to 
+     * cut the execution and prevent the execution 
+     * of the main handler callback of the endpoint.
+     *
+     * @params callable $callback
+     *
+     * @return self
+     */
     public function middleware(callable $callback): self
     {
         $this->middlewareCallback = $callback;
         return $this;
     }
 
+    /**
+     * The callable callback passed is the main 
+     * handler callback of the endpoint.
+     *
+     * @params callable $callback
+     *
+     * @return self
+     */
     public function callback(callable $callback): self
     {
         $this->callback = $callback;

@@ -43,6 +43,13 @@ include_once('Validator.php');
                     'message' => "Hello, World! from Usuarios endpoint!",
                     'params'  => json_encode($request->getParams())
                 ])->send();
+        }))->middleware((function (Request $request, Response $response) {
+            // $response
+            //     ->setHeader('Content-Type', 'application/json')
+            //     ->setStatusCode(401)
+            //     ->setBody(["error" => "bad credentials"])
+            //     ->send();
+            // return RouterConstants::PREVENT_MAIN_CALLBACK_EXECUTION;
         }))
     );
 
@@ -74,7 +81,50 @@ include_once('Validator.php');
                 $response->sendValidationErrorResponse($validatorResponse);
                 return;
             }
-
-        }))->middleware((function (Request $request, Response $response) {}))
+        }))->middleware((function (Request $request, Response $response) {
+            // return RouterConstants::PREVENT_MAIN_CALLBACK_EXECUTION;
+        }))
     );
+
+
+    /**
+     * @name /users
+     *
+     * @APIDOC
+     * - @description remove an user.
+     *
+     * - @method DELETE
+     *
+     * - @returns message
+     */
+    Router::delete(
+        (new Route('/users'))->callback((function (Request $request, Response $response) {
+            /**
+             * @ExpectedParams
+             */
+            $validator = new Validator($request);
+            $validatorResponse = $validator
+                ->param('id')->isOptional(false)->withMessage('Must have this parameter')->isEmail()
+                ->validate();
+
+            /**
+             * Validation error response...
+             */
+            if ($validatorResponse->thereIsErrors()) {
+                $response->sendValidationErrorResponse($validatorResponse);
+                return;
+            }
+        }))->middleware((function (Request $request, Response $response) {
+            // return RouterConstants::PREVENT_MAIN_CALLBACK_EXECUTION;
+        }))
+    );
+
+     Router::put(
+         (new Route('/users'))->callback((function (Request $request, Response $response) {
+             
+         }))->middleware((function (Request $request, Response $response) {
+            // return RouterConstants::PREVENT_MAIN_CALLBACK_EXECUTION;      
+         }))
+     );
+    
 })();
