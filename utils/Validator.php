@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 include_once('ValidatorConstants.php');
-include_once('Request.php');
+
+use SMU\Request;
 
 class ValidatorResponse
 {
@@ -16,7 +17,7 @@ class ValidatorResponse
 
     public function thereIsErrors(): bool
     {
-        return !$this->schemeErrors['validation_scheme']['nb_errors'] == 0;
+        return !$this->schemeErrors['validation_scheme']['nb_errors'] == 0 || $this->schemeErrors['validation_scheme']['status'] === false;
     }
 
     public function getErrors(): ?array
@@ -128,14 +129,25 @@ class Validator
     {
         $params = $this->request->getParams();
 
+        if (count($this->request->getParams()) > count($this->validationSqueme)) {
+            return new ValidatorResponse([
+                'validation_scheme' => [
+                    'status'    => false,
+                    'errors'    => ['There\'s  more params than the validation scheme.'],
+                    'nb_errors' => 1
+                ]
+            ]);
+        }
+
         if (count($this->validationSqueme) == 0) {
             $this->errorsCounter++;
-            return [
+            return new ValidatorResponse([
                 'validation_scheme' => [
-                    'status'  => false,
-                    'message' => 'No validation scheme defined'
+                    'status'    => false,
+                    'errors'    => 'No validation scheme defined',
+                    'nb_errors' => 1
                 ]
-            ];
+            ]);
         }
 
         foreach ($this->validationSqueme as $key => $scheme) {
@@ -179,6 +191,7 @@ class Validator
 
         return new ValidatorResponse([
             'validation_scheme' => [
+                'status'    => true,
                 'errors'    => $this->errors,
                 'nb_errors' => $this->errorsCounter
             ]

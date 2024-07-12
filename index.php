@@ -8,6 +8,9 @@ include_once('utils/Response.php');
 include_once('utils/Router.php');
 include_once('controllers/UserController.php');
 
+use \SMU\Request;
+use \SMU\Response;
+
 $request  = new Request();
 $response = new Response();
 

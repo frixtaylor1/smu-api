@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace SMU;
+
 include_once('Validator.php');
 
 class Response

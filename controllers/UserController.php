@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-include_once('Request.php');
-include_once('Response.php');
 include_once('Router.php');
 include_once('Validator.php');
+
+use SMU\Request as Request;
+use SMU\Response as Response;
 
 (function () {
     /**
@@ -26,6 +27,7 @@ include_once('Validator.php');
             $validator = new Validator($request);
             $validatorResponse = $validator
                 ->param('id')->isOptional()->isInteger()->withMessage('Must be an integer!')
+                ->param('user')->isOptional()->isString()->withMessage('Must be an string')
                 ->validate();
 
             /**

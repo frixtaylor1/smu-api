@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-include_once('Request.php');
-include_once('Response.php');
+use SMU\Request as Request;
+use SMU\Response as Response;
 
 class Route
 {
