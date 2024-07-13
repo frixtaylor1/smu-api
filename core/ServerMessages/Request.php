@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace SMU\Core;
+
 class Request
 {
     private $method;

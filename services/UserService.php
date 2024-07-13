@@ -1,7 +1,5 @@
 <?php
 
-include_once('DataBaseHandler.php');
-
 /**
  * Get user/s 
  *

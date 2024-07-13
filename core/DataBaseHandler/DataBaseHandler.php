@@ -1,6 +1,6 @@
 <?php
 
-class DatabaseManager
+class DataBaseHandler
 {
     private static $instance = null;
     private $conn;
@@ -25,14 +25,14 @@ class DatabaseManager
         );
 
         if ($this->conn->connect_error) {
-            die("Conexión fallida: " . $this->conn->connect_error);
+            die("Connection faild: " . $this->conn->connect_error);
         }
     }
 
     public static function getInstance()
     {
         if (self::$instance == null) {
-            self::$instance = new DatabaseManager();
+            self::$instance = new DataBaseHandler();
         }
         return self::$instance;
     }

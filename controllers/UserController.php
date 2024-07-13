@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-include_once('Router.php');
-include_once('Validator.php');
-
-use SMU\Request as Request;
-use SMU\Response as Response;
+use SMU\Core\Router;
+use SMU\Core\Router\Route;
+use SMU\Core\Request as Request;
+use SMU\Core\Response as Response;
+use SMU\Core\Validator as Validator;
 
 (function () {
     /**

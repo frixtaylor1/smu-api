@@ -1,5 +1,7 @@
 <?php
 
+namespace SMU\Core\Constants;
+
 class ValidatorConstants
 {
     const TYPE_INTEGER = 'integer';

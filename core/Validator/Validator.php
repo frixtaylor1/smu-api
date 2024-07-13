@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-include_once('ValidatorConstants.php');
+namespace SMU\Core;
 
-use SMU\Request;
+use SMU\Core\Constants\ValidatorConstants;
+use SMU\Core\Request;
+use Error;
 
 class ValidatorResponse
 {

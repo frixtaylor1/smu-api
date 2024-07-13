@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
-include_once('RouterConstants.php');
-include_once('Route.php');
+namespace SMU\Core;
+
+use SMU\Core\Router\Route;
+use SMU\Core\Request as Request;
+use SMU\Core\Response as Response;
 
 class Router
 {
@@ -47,7 +50,7 @@ class Router
         self::$routes[$method][$compiledRegex] = [$route];
     }
 
-    public static function dispatch($request, $response): void
+    public static function dispatch(Request $request, Response $response): void
     {
         $method = $request->getMethod();
         $path   = $request->getPath();

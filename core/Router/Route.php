@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-include_once('Response.php');
+namespace SMU\Core\Router;
 
-use SMU\Request as Request;
-use SMU\Reponse as Response;
+use SMU\Core\Request as Request;
+use SMU\Core\Response as Response;
 
 class Route
 {
@@ -19,9 +19,8 @@ class Route
     }
 
     /**
-     * The callable function must return false to 
-     * cut the execution and prevent the execution 
-     * of the main handler callback of the endpoint.
+     * Middleware must return PREVENT_MAIN_CALLBACK_EXECUTION const
+     * if you want to prevent the execution of the callback method
      *
      * @params callable $callback
      *
@@ -34,8 +33,7 @@ class Route
     }
 
     /**
-     * The callable callback passed is the main 
-     * handler callback of the endpoint.
+     * Main handler callback of the endpoint.
      *
      * @params callable $callback
      *
@@ -51,7 +49,7 @@ class Route
     {
         if ($this->middlewareCallback) {
             $middlewareResult = call_user_func_array($this->middlewareCallback, [$request, $response]);
-            if (!$middlewareResult) {
+            if ($middlewareResult === false) {
                 return;
             }
         }
