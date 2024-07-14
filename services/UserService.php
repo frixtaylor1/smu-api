@@ -13,7 +13,7 @@ class User
      *
      * @return UserModel|array<UserModel>
      */
-    public function getUsers(int $id = null): null|UserModel|array
+    public function getUsers(int $id = null, int $nbOfrows = null, int $offset = null): null|UserModel|array
     {
         $userModel = new UserModel();
         $result = $id ? $userModel->find($id) : $userModel->all();

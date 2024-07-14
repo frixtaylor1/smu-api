@@ -26,8 +26,7 @@ abstract class Model
     {
         $sql    = "SELECT * FROM {$this->table} WHERE id = ?";
         $result = $this->query($sql, [[DBTypes::INT => $id]]);
-
-        return $result ? $this->mapResult($result[0]) : null;
+        return !empty($result) ? $this->mapResult($result[0]) : null;
     }
 
     public function create($data)
@@ -75,7 +74,13 @@ abstract class Model
         $sql     = "SELECT * FROM {$this->table}";
         $result  = $this->db->getConnection()->query($sql);
 
-        return array_map([$this, 'mapResult'], $result->fetch_all(MYSQLI_ASSOC));
+        $objects = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $objects[] = $this->mapResult($row);
+            }
+        }
+        return $objects;
     }
 
     protected function getParamTypes($data)
@@ -96,8 +101,12 @@ abstract class Model
         return $types;
     }
 
-    protected function mapResult($result): self
+    protected function mapResult($result): ?self
     {
+        if (empty($result)) {
+            return null;
+        }
+
         $model = clone $this;
         foreach ($result as $key => $value) {
             $method = "set" . ucfirst($key);

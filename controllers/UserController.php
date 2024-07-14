@@ -41,21 +41,35 @@ use SMU\Services\User as UserServices;
             }
 
             $userService = new UserServices();
-            $id      = null;
+            $id          = null;
             if (isset($request->getParams()['id'])) {
                 $id = (int) $request->getParams()['id'];
             }
+
             $result = $userService->getUsers($id);
-            
+            $data   = [];
+            if (is_array($result)) {
+                foreach ($result as $user) {
+                    $data[] = [
+                        "id"     => $user->getId(),
+                        "nombre" => $user->getName(),
+                        "email"  => $user->getEmail()        
+                    ];
+                }
+            }
+
+            if (!is_array($result) && $result) {
+                $data = [
+                    "nombre" => $result->getName(),
+                    "email"  => $result->getEmail(),
+                ];
+            }
+
             $response
                 ->setHeader('Content-type', 'application/json')
                 ->setStatusCode(200)
                 ->setBody([
-                    'message' => "Hello, World! from Usuarios endpoint!",
-                    'data'  => [
-                        "nombre" => $result->getName(),
-                        "email"  => $result->getEmail()       
-                    ]
+                    'data' => !is_array($data) ? $data : json_encode($data),
                 ])->send();
         }))->middleware((function (Request $request, Response $response) {
             // $response
