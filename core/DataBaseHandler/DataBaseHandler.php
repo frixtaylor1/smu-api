@@ -1,5 +1,9 @@
 <?php
 
+namespace SMU\Core;
+
+use mysqli;
+
 class DataBaseHandler
 {
     private static $instance = null;
@@ -13,16 +17,14 @@ class DataBaseHandler
         $database = getenv('MYSQL_DATABASE');
         $port     = getenv('MYSQL_PORT');
 
-
         $this->conn = new mysqli(
             $host,
             $username,
             $password,
             $database,
             $port,
-            null,
-            MYSQLI_CLIENT_FOUND_ROWS | MYSQLI_CLIENT_COMPRESS | MYSQLI_CLIENT_SSL | MYSQLI_CLIENT_IGNORE_SPACE | MYSQLI_CLIENT_INTERACTIVE | MYSQLI_CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS | MYSQLI_CLIENT_NO_SCHEMA
-        );
+            null
+       );
 
         if ($this->conn->connect_error) {
             die("Connection faild: " . $this->conn->connect_error);
@@ -48,5 +50,38 @@ class DataBaseHandler
             $this->conn->close();
             $this->conn = null;
         }
+    }
+
+    public function executeStoreProcedure($sql, $params = [])
+    {
+        $stmt = $this->conn->prepare($sql);
+
+        if ($params) {
+            $types  = '';
+            $values = [];
+            foreach ($params as $param) {
+                $type  = key($param);
+                $value = current($param);
+
+                $types   .= $type;
+                $values[] = $value;
+            }
+
+            $stmt->bind_param($types, ...$values);
+        }
+
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $rows = [];
+
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $rows[] = $row;
+            }
+        }
+
+        $stmt->close();
+        return $rows;
     }
 }

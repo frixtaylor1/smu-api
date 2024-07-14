@@ -7,6 +7,7 @@ use SMU\Core\Router\Route;
 use SMU\Core\Request as Request;
 use SMU\Core\Response as Response;
 use SMU\Core\Validator as Validator;
+use SMU\Services\User as UserServices;
 
 (function () {
     /**
@@ -23,11 +24,12 @@ use SMU\Core\Validator as Validator;
         (new Route('/users'))->callback((function (Request $request, Response $response) {
             /** 
              * @ExpectedParams
+             * 
+             * @param int id <optional>
              */
             $validator = new Validator($request);
             $validatorResponse = $validator
                 ->param('id')->isOptional()->isInteger()->withMessage('Must be an integer!')
-                ->param('user')->isOptional()->isString()->withMessage('Must be an string')
                 ->validate();
 
             /**
@@ -38,12 +40,22 @@ use SMU\Core\Validator as Validator;
                 return;
             }
 
+            $userService = new UserServices();
+            $id      = null;
+            if (isset($request->getParams()['id'])) {
+                $id = (int) $request->getParams()['id'];
+            }
+            $result = $userService->getUsers($id);
+            
             $response
                 ->setHeader('Content-type', 'application/json')
                 ->setStatusCode(200)
                 ->setBody([
                     'message' => "Hello, World! from Usuarios endpoint!",
-                    'params'  => json_encode($request->getParams())
+                    'data'  => [
+                        "nombre" => $result->getName(),
+                        "email"  => $result->getEmail()       
+                    ]
                 ])->send();
         }))->middleware((function (Request $request, Response $response) {
             // $response
@@ -69,11 +81,16 @@ use SMU\Core\Validator as Validator;
         (new Route('/users'))->callback((function (Request $request, Response $response) {
             /**
              * @ExpectedParams
+             *
+             * @param string name
+             * @param string email
+             * @param string password
              */
             $validator = new Validator($request);
             $validatorResponse = $validator
                 ->param('name')->isOptional(false)->withMessage('Must this parameter!')->isString()
                 ->param('email')->isOptional(false)->withMessage('Must have this parameter')->isEmail()
+                ->param('password')->isOptional(false)->withMessage('Must have this parameter')->isString()
                 ->validate();
 
             /**
@@ -103,6 +120,8 @@ use SMU\Core\Validator as Validator;
         (new Route('/users'))->callback((function (Request $request, Response $response) {
             /**
              * @ExpectedParams
+             *
+             * @param int id
              */
             $validator = new Validator($request);
             $validatorResponse = $validator
@@ -121,12 +140,39 @@ use SMU\Core\Validator as Validator;
         }))
     );
 
+    /**
+     * @name /users
+     *
+     * @APIDOC
+     * - @description remove an user.
+     *
+     * - @method PUT
+     *
+     * - @returns message
+     */    
      Router::put(
-         (new Route('/users'))->callback((function (Request $request, Response $response) {
-             
-         }))->middleware((function (Request $request, Response $response) {
+        (new Route('/users'))->callback((function (Request $request, Response $response) {
+            /**
+             * @ExpectedParams
+             *
+             * @param int id
+             * @param string name <optional>
+             * @param string email <optional>
+             */
+            $validator = new Validator($request);
+            $validatorResponse = $validator
+                ->param('id')->isOptional(false)->withMessage('Must have this parameter')->isEmail()
+                ->validate();
+
+            /**
+             * Validation error response...
+             */
+            if ($validatorResponse->thereIsErrors()) {
+                $response->sendValidationErrorResponse($validatorResponse);
+                return;
+            }
+        }))->middleware((function (Request $request, Response $response) {
             // return RouterConstants::PREVENT_MAIN_CALLBACK_EXECUTION;      
-         }))
-     );
-    
+        }))
+    );
 })();
