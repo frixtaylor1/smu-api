@@ -15,10 +15,10 @@ use SMU\Services\User as UserServices;
      * @name /users.
      *
      * @APIDOC
-     * - @description get the users.
+     * - get the users.
      * - @method GET
      *
-     * - @returns users
+     * - @return array
      */
     Router::get(
         (new Route('/users'))->callback((function (Request $request, Response $response) {
@@ -63,7 +63,7 @@ use SMU\Services\User as UserServices;
      * 
      * - @method POST
      *
-     * - @return users
+     * - @return array
      */
     Router::post(
         (new Route('/users'))->callback((function (Request $request, Response $response) {
@@ -80,8 +80,7 @@ use SMU\Services\User as UserServices;
             $userService    = new UserServices();
             $resUserService = $userService->createUser($validatorResult);
             $statusCode     = $resUserService['status'] ? 200 : 400;
-
-            var_dump($resUserService);
+            
             $response
                 ->setHeader('Content-Type', 'application/json')
                 ->setStatusCode($statusCode)
@@ -181,7 +180,7 @@ function _validateParamsGetUsers(Request $request): ValidatorResult
 {
     $validator = new Validator($request);
     return $validator
-        ->param('id')->isOptional(false)->isInteger()->withMessage('Must be an integer!')
+        ->param('id')->isOptional()->isInteger()->withMessage('Must be an integer!')
         ->param('nb_of_rows')->isOptional()->isInteger()->withMessage('Must be an integer!')
         ->param('offset')->isOptional()->isInteger()->withMessage('Must be an integer!')
         ->validate();

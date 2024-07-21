@@ -67,10 +67,6 @@ abstract class Model
         $placeHolders   = implode(", ", array_fill(0, count($data), "?"));
         $types          = $this->getParamTypes($data);
         
-        // Depuración
-        error_log("Consulta SQL: INSERT INTO {$this->table} ({$columns}) VALUES ({$placeHolders})");
-        error_log("Datos para insertar: " . print_r(array_values($data), true));
-    
         $sql    = "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeHolders})";
         $stmt   = $this->db->getConnection()->prepare($sql);
         
@@ -172,9 +168,6 @@ abstract class Model
             return in_array($key, $this->fillable);
         }, ARRAY_FILTER_USE_KEY);
     
-        // Depuración
-        error_log("Datos filtrados: " . print_r($filteredData, true));
-    
         return $filteredData;
     }
 
@@ -183,12 +176,10 @@ abstract class Model
         $data = get_object_vars($this);
         $data = $this->filterFillable($data);
         
-        // Si el id está definido, actualiza el registro existente
         if (!empty($this->id)) {
             return $this->update($this->id, $data);
         }
         
-        // Si el id no está definido, crea un nuevo registro
         $newModel = $this->create($data);
         $this->id = $newModel->getId();
         return $this;

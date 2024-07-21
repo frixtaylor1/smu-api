@@ -57,7 +57,7 @@ class User
         try {
             $user = new UserModel();
             
-            if ($user->findByEmail($validatedData->getParam('email'))) {
+            if (!$user->findByEmail($validatedData->getParam('email'))) {
                 return [
                     'status'  => false,
                     'message' => "user with email {$validatedData->getParam('email')} exist!"
@@ -71,21 +71,15 @@ class User
                 ->setAddress($validatedData->getParam('address'))
                 ->save();
 
-            $savedUser = $user->save();
-
-            $data = [
-                "email"=>$validatedData->getParam('email'),
-                "password"=>$validatedData->getParam('password'),
-                "name"=>$validatedData->getParam('name'),
-                "address"=>$validatedData->getParam('address'),
-            ];
-            var_dump($data);
             return [
                 'status'  => true,
-                'id_user' => $savedUser->getId(),
+                'id_user' => $user->getId(),
             ];
         } catch (Error $err) {
-            throw $err;
+            return [
+                'status' => false,
+                'error'  => $err
+            ];
         }
     }
 

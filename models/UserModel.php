@@ -82,6 +82,6 @@ class User extends Model
     public function findByEmail($email): ?self
     {
         $result = $this->query("SELECT * FROM {$this->table} WHERE email = ?", [[DBTypes::VARCHAR => $email]]);
-        return !empty($result) ? false : $this->mapResult($result);
+        return !empty($result) ? null : $this->mapResult($result);
     }
 }
