@@ -28,14 +28,41 @@ class ValidatorResponse
     }
 }
 
+class ValidatorResult
+{
+    private $validatedParams;
+    private $response;
+
+    public function __construct(array $validatedParams, ValidatorResponse $response)
+    {
+        $this->validatedParams = $validatedParams;
+        $this->response        = $response;
+    }
+
+    public function getParams(): array
+    {
+        return $this->validatedParams;
+    }
+
+    public function getResponse(): ValidatorResponse
+    {
+        return $this->response;
+    }
+
+    public function getParam(string $key): mixed
+    {
+        return isset($this->validatedParams[$key]) ? $this->validatedParams[$key] : null;
+    }
+}
+
 class Validator
 {
     private $request;
-    private $validationSqueme = [];
     private $lastParamName;
     private $lastIndexScheme;
-    private $errorsCounter = 0;
-    private $errors = [];
+    private $validationSqueme = [];
+    private $errorsCounter    = 0;
+    private $errors           = [];
 
     public function __construct(Request $request)
     {
@@ -54,57 +81,27 @@ class Validator
 
     public function isBoolean(): ?self
     {
-        if (isset($this->validationSqueme[$this->lastParamName]['type'])) {
-            throw new Error($this->redefinitionParamErrorMsgIn($this->lastParamName));
-        }
-
-        $this->lastIndexScheme = 'type';
-        $this->validationSqueme[$this->lastParamName]['type'] = ['value' => ValidatorConstants::TYPE_BOOLEAN];
-        return $this;
+        return $this->setType(ValidatorConstants::TYPE_BOOLEAN);
     }
 
     public function isInteger(): ?self
     {
-        if (isset($this->validationSqueme[$this->lastParamName]['type'])) {
-            throw new Error($this->redefinitionParamErrorMsgIn($this->lastParamName));
-        }
-
-        $this->lastIndexScheme = 'type';
-        $this->validationSqueme[$this->lastParamName]['type'] = ['value' => ValidatorConstants::TYPE_INTEGER];
-        return $this;
+        return $this->setType(ValidatorConstants::TYPE_INTEGER);
     }
 
     public function isString(): ?self
     {
-        if (isset($this->validationSqueme[$this->lastParamName]['type'])) {
-            throw new Error($this->redefinitionParamErrorMsgIn($this->lastParamName));
-        }
-
-        $this->lastIndexScheme = 'type';
-        $this->validationSqueme[$this->lastParamName]['type'] = ['value' => ValidatorConstants::TYPE_STRING];
-        return $this;
+        return $this->setType(ValidatorConstants::TYPE_STRING);
     }
 
     public function isArray(): ?self
     {
-        if (isset($this->validationSqueme[$this->lastParamName]['type'])) {
-            throw new Error($this->redefinitionParamErrorMsgIn($this->lastParamName));
-        }
-
-        $this->lastIndexScheme = 'type';
-        $this->validationSqueme[$this->lastParamName]['type'] = ['value' => ValidatorConstants::TYPE_ARRAY];
-        return $this;
+        return $this->setType(ValidatorConstants::TYPE_ARRAY);
     }
 
     public function isEmail(): ?self
     {
-        if (isset($this->validationSqueme[$this->lastParamName]['type'])) {
-            throw new Error($this->redefinitionParamErrorMsgIn($this->lastParamName));
-        }
-
-        $this->lastIndexScheme = 'type';
-        $this->validationSqueme[$this->lastParamName]['type'] = ['value' => ValidatorConstants::TYPE_EMAIL];
-        return $this;
+        return $this->setType(ValidatorConstants::TYPE_EMAIL);
     }
 
     public function isOptional(bool $value = true): ?self
@@ -126,82 +123,141 @@ class Validator
         $this->validationSqueme[$this->lastParamName][$this->lastIndexScheme]['message'] = $message;
         return $this;
     }
-
-    public function validate(): ValidatorResponse
+  
+    public function validate(): ValidatorResult
     {
-        $params = $this->request->getParams();
+        $validatedParams        = [];
+        $params                 = $this->getParamsToValidate();
+        $responsePreValidation  = $this->preValidationSchemeAndParams($params);
 
-        if (count($this->request->getParams()) > count($this->validationSqueme)) {
-            return new ValidatorResponse([
-                'validation_scheme' => [
-                    'status'    => false,
-                    'errors'    => ['There\'s  more params than the validation scheme.'],
-                    'nb_errors' => 1
-                ]
-            ]);
+        if ($responsePreValidation) {
+            return $responsePreValidation;
         }
-
-        if (count($this->validationSqueme) == 0) {
-            $this->errorsCounter++;
-            return new ValidatorResponse([
-                'validation_scheme' => [
-                    'status'    => false,
-                    'errors'    => 'No validation scheme defined',
-                    'nb_errors' => 1
-                ]
-            ]);
-        }
-
-        foreach ($this->validationSqueme as $key => $scheme) {
-            $value               = $params[$key] ?? null;
-            $type                = gettype($value);
-            $isOptional          = $scheme['optional']['value'];
-            $schemeValidatorType = $scheme['type']['value'];
-
-            if ($isOptional && !$value && !isset($params[$key])) {
-                continue;
-            }
-
-            if (!$isOptional) {
-                if (!$value) {
+       
+        if ($params) {
+            foreach ($this->validationSqueme as $key => $scheme) {
+                $value               = $params[$key] ?? null;
+                $type                = gettype($value);
+                $isOptional          = $scheme['optional']['value'];
+                $schemeValidatorType = $scheme['type']['value'];
+                
+                if ($isOptional && !$value && !isset($params[$key])) {
+                    continue;
+                }
+                
+                if (!$isOptional && !$value) {
                     $this->errors[$key] = [
                         'message' => $scheme['optional']['message']
                     ];
                     $this->errorsCounter++;
                     continue;
-                }
-            }
+                }                
+                
+                $this->castTypes($schemeValidatorType, $value, $type);
 
-            if ($schemeValidatorType === ValidatorConstants::TYPE_INTEGER) {
-                if (is_numeric($value) && intval($value) == $value) {
-                    $value = intval($value);
-                    $type  = ValidatorConstants::TYPE_INTEGER;
-                }
-            }
+                if ($type !== $schemeValidatorType || (isset($params[$key])) && !$value) {
+                    $this->errorsCounter++;
+                    $this->errors[$key]['type'] = [
+                        'message' => $scheme['type']['message'] ?? "Invalid type, expected {$schemeValidatorType}",
+                    ];
+                    continue;
+                } 
 
-            if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                $type = ValidatorConstants::TYPE_EMAIL;
-            }
-
-            if ($type !== $schemeValidatorType || (isset($params[$key])) && !$value) {
-                $this->errorsCounter++;
-                $this->errors[$key]['type'] = [
-                    'message' => $scheme['type']['message'] ?? "Invalid type, expected {$schemeValidatorType}",
-                ];
+                $validatedParams[$key] = $value;
             }
         }
-
-        return new ValidatorResponse([
+        
+        $response = new ValidatorResponse([
             'validation_scheme' => [
-                'status'    => true,
+                'status'    => $this->errorsCounter === 0,
                 'errors'    => $this->errors,
                 'nb_errors' => $this->errorsCounter
             ]
         ]);
-    }
 
+        return new ValidatorResult($validatedParams, $response);
+    }
+    
+    private function setType(string $type): self
+    {
+        $this->evaluateTypeTwice();
+        $this->lastIndexScheme = 'type';
+        $this->validationSqueme[$this->lastParamName]['type'] = ['value' => $type];
+        return $this;
+    }
+    
+    private function evaluateTypeTwice($schemeType = 'type'): void
+    {       
+        if (isset($this->validationSqueme[$this->lastParamName][$schemeType])) {
+            throw new Error($this->redefinitionParamErrorMsgIn($this->lastParamName));
+        }    
+    }
+ 
     private function redefinitionParamErrorMsgIn(string $param)
     {
         return "Cannot redefine type in validation for param {$param}.";
+    }
+    
+    private function getParamsToValidate(): ?array
+    {       
+        $bodyReq  = $this->request->getBody();
+        $queryReq = $this->request->getParams();
+        $params   = [];
+
+        if ($bodyReq && $queryReq){
+            $params = array_merge(...$queryReq, ...$bodyReq);
+        }
+
+        if ($queryReq) {
+            $params = $queryReq;
+        }
+
+        if ($bodyReq) {
+            $params = $bodyReq;
+        }    
+
+        return $params;
+    }
+    
+    private function castTypes($schemeValidatorType, & $value, & $type): void
+    {
+        if ($schemeValidatorType === ValidatorConstants::TYPE_INTEGER) {
+            if (is_numeric($value) && intval($value) == $value) {
+                $value = intval($value);
+                $type  = ValidatorConstants::TYPE_INTEGER;
+            }
+        }
+
+        if ($schemeValidatorType === ValidatorConstants::TYPE_EMAIL) {
+            if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                $type = ValidatorConstants::TYPE_EMAIL;
+            }
+        }
+    }
+
+    private function preValidationSchemeAndParams($params): ?ValidatorResult
+    {
+        $errorMessage = '';   
+
+        if (count($params) > count($this->validationSqueme)) {
+            $errorMessage = 'There\'s  more params than the validation scheme.';           
+        }
+
+        if (count($this->validationSqueme) == 0) {
+            $errorMessage = 'No validation scheme defined';
+        }
+
+        if ($errorMessage !== '') {
+             $response = new ValidatorResponse([
+                'validation_scheme' => [
+                    'status'    => false,
+                    'errors'    => [$errorMessage],
+                    'nb_errors' => 1
+                ]
+            ]);           
+            return new ValidatorResult([], $response);
+        }
+
+        return null;
     }
 }

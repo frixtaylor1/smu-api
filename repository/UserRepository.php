@@ -2,18 +2,7 @@
 
 namespace SMU\Repository;
 
-use SMU\Core\DataBaseHandler;
-use SMU\Constants\UserConstants;
-
-class UserRepository
+class User
 {
-    public static function findById(int $id)
-    {
-        $db   = DataBaseHandler::getInstance();
-        $conn = $db->getConnection();        
 
-        $stmt = $conn->prepare();
-        
-        $db->closeConnection();
-    }
 }

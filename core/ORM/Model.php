@@ -8,13 +8,43 @@ use SMU\Core\DataBaseHandler;
 abstract class Model
 {
     protected $db;
-    protected $table;
     protected $conn;
-    protected $fillable;
+    protected $table;
+    private   $fillable;
 
     public function __construct()
     {
     	$this->db = DataBaseHandler::getInstance();
+        $this->initialize();
+    }
+
+    /**
+     * - Must return the `tableName` and `fillable` members of the 
+     * table in an array for the configuration of the model.
+     * 
+     * Example:
+     * 
+     * return [
+     *    `'tableName'` => 'users',
+     *    `'fillable'`  => [
+     *        'name',
+     *        'email',
+     *        'password',
+     *    ]
+     * ] 
+     */
+    protected abstract function getTableConfig(): array;
+
+    /**
+     * Is mandatory to have a id in a model.
+     */
+    public abstract function getId(): mixed;
+
+    private function initialize()
+    {
+        $config         = $this->getTableConfig();
+        $this->table    = $config['tableName'];
+        $this->fillable = $config['fillable'];
     }
 
     protected function query($sql, $params = []): array
@@ -29,19 +59,35 @@ abstract class Model
         return !empty($result) ? $this->mapResult($result[0]) : null;
     }
 
-    public function create($data)
+    public function create($data): self
     {
-        $data         = $this->filterFillable($data);
-        $columns      = implode(", ", array_keys($data));
-        $placeHolders = implode(", ", array_fill(0, count($data), "?")); 
-        $types        = $this->getParamTypes($data);
-
-        $sql          = "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeHolders})";
-        $stmt         = $this->db->getConnection()->prepare($sql);
+        $data = $this->filterFillable($data);
+        
+        $columns        = implode(", ", array_keys($data));
+        $placeHolders   = implode(", ", array_fill(0, count($data), "?"));
+        $types          = $this->getParamTypes($data);
+        
+        // Depuración
+        error_log("Consulta SQL: INSERT INTO {$this->table} ({$columns}) VALUES ({$placeHolders})");
+        error_log("Datos para insertar: " . print_r(array_values($data), true));
+    
+        $sql    = "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeHolders})";
+        $stmt   = $this->db->getConnection()->prepare($sql);
+        
+        if (!$stmt) {
+            error_log("Error en prepare: " . $this->db->getConnection()->error);
+        }
+    
         $stmt->bind_param($types, ...array_values($data));
         $stmt->execute();
-
-        return $stmt->insert_id;
+    
+        if ($stmt->error) {
+            error_log("Error en execute: " . $stmt->error);
+        }
+    
+        $this->id = $stmt->insert_id;
+    
+        return $this;
     }
 
     public function update($id, $data)
@@ -60,7 +106,7 @@ abstract class Model
 
     public function delete($id)
     {
-        $sql = "DELETE FROM {$this->table} WHERE id = ?";
+        $sql  = "DELETE FROM {$this->table} WHERE id = ?";
         $stmt = $this->db->getConnection()->prepare($sql);
 
         $stmt->bind_param('i', $id);
@@ -86,18 +132,19 @@ abstract class Model
     protected function getParamTypes($data)
     {
         $types = '';
-
+    
         foreach ($data as $value) {
-            if (is_int($value)) {
-                $types .= DBTypes::INT;
-            } else if (is_float($value)) {
-                $types .= DBTypes::FLOAT;
-            } else if (is_string($value)) {
-                $types .= DBTypes::VARCHAR;
-            } else {
-                $types .= DBTypes::BLOB;
-            }
+            $types .= match (true) {
+                is_int($value)    => DBTypes::INT,
+                is_float($value)  => DBTypes::FLOAT,
+                is_string($value) => DBTypes::VARCHAR,
+                default           => DBTypes::BLOB
+            };
         }
+    
+        // Depuración
+        error_log("Tipos de parámetros: " . $types);
+    
         return $types;
     }
 
@@ -121,8 +168,29 @@ abstract class Model
 
     protected function filterFillable($data)
     {
-        return array_filter($data, function ($key) {
+        $filteredData = array_filter($data, function ($key) {
             return in_array($key, $this->fillable);
         }, ARRAY_FILTER_USE_KEY);
+    
+        // Depuración
+        error_log("Datos filtrados: " . print_r($filteredData, true));
+    
+        return $filteredData;
+    }
+
+    public function save(): self|int
+    {
+        $data = get_object_vars($this);
+        $data = $this->filterFillable($data);
+        
+        // Si el id está definido, actualiza el registro existente
+        if (!empty($this->id)) {
+            return $this->update($this->id, $data);
+        }
+        
+        // Si el id no está definido, crea un nuevo registro
+        $newModel = $this->create($data);
+        $this->id = $newModel->getId();
+        return $this;
     }
 }

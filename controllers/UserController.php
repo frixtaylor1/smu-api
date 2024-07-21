@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 use SMU\Core\Router;
 use SMU\Core\Router\Route;
-use SMU\Core\Request as Request;
-use SMU\Core\Response as Response;
-use SMU\Core\Validator as Validator;
+use SMU\Core\Request;
+use SMU\Core\Response;
+use SMU\Core\Validator;
+use SMU\Core\ValidatorResult;
 use SMU\Services\User as UserServices;
 
 (function () {
@@ -15,61 +16,34 @@ use SMU\Services\User as UserServices;
      *
      * @APIDOC
      * - @description get the users.
-     *
      * - @method GET
      *
      * - @returns users
      */
     Router::get(
         (new Route('/users'))->callback((function (Request $request, Response $response) {
-            /** 
-             * @ExpectedParams
-             * 
-             * @param int id <optional>
-             */
-            $validator = new Validator($request);
-            $validatorResponse = $validator
-                ->param('id')->isOptional()->isInteger()->withMessage('Must be an integer!')
-                ->validate();
+            $validatorResult = _validateParamsGetUsers($request);
 
             /**
              * Validation error response...
              */
-            if ($validatorResponse->thereIsErrors()) {
-                $response->sendValidationErrorResponse($validatorResponse);
+            if ($validatorResult->getResponse()->thereIsErrors()) {
+                $response->sendValidationErrorResponse($validatorResult->getResponse());
                 return;
             }
 
             $userService = new UserServices();
-            $id          = null;
-            if (isset($request->getParams()['id'])) {
-                $id = (int) $request->getParams()['id'];
-            }
-
-            $result = $userService->getUsers($id);
-            $data   = [];
-            if (is_array($result)) {
-                foreach ($result as $user) {
-                    $data[] = [
-                        "id"     => $user->getId(),
-                        "nombre" => $user->getName(),
-                        "email"  => $user->getEmail()        
-                    ];
-                }
-            }
-
-            if (!is_array($result) && $result) {
-                $data = [
-                    "nombre" => $result->getName(),
-                    "email"  => $result->getEmail(),
-                ];
-            }
+            $users       = $userService->getUsers(
+                $validatorResult->getParam('id'), 
+                $validatorResult->getParam('nb_of_rows'), 
+                $validatorResult->getParam('offset')
+            );
 
             $response
                 ->setHeader('Content-type', 'application/json')
                 ->setStatusCode(200)
                 ->setBody([
-                    'data' => !is_array($data) ? $data : json_encode($data),
+                    'users' => !is_array($users) ? $users : $users,
                 ])->send();
         }))->middleware((function (Request $request, Response $response) {
             // $response
@@ -85,40 +59,39 @@ use SMU\Services\User as UserServices;
      * @name /users
      *
      * @APIDOC
-     * - @description create an user.
-     *
+     * - create an user.
+     * 
      * - @method POST
      *
-     * - @returns users
+     * - @return users
      */
     Router::post(
         (new Route('/users'))->callback((function (Request $request, Response $response) {
-            /**
-             * @ExpectedParams
-             *
-             * @param string name
-             * @param string email
-             * @param string password
-             */
-            $validator = new Validator($request);
-            $validatorResponse = $validator
-                ->param('name')->isOptional(false)->withMessage('Must this parameter!')->isString()
-                ->param('email')->isOptional(false)->withMessage('Must have this parameter')->isEmail()
-                ->param('password')->isOptional(false)->withMessage('Must have this parameter')->isString()
-                ->validate();
+            $validatorResult = _validateParamsPostUsers($request);
 
             /**
              * Validation error response...
              */
-            if ($validatorResponse->thereIsErrors()) {
-                $response->sendValidationErrorResponse($validatorResponse);
+            if ($validatorResult->getResponse()->thereIsErrors()) {
+                $response->sendValidationErrorResponse($validatorResult->getResponse());
                 return;
             }
+
+            $userService    = new UserServices();
+            $resUserService = $userService->createUser($validatorResult);
+            $statusCode     = $resUserService['status'] ? 200 : 400;
+
+            var_dump($resUserService);
+            $response
+                ->setHeader('Content-Type', 'application/json')
+                ->setStatusCode($statusCode)
+                ->setBody($resUserService)
+                ->send();
+
         }))->middleware((function (Request $request, Response $response) {
             // return RouterConstants::PREVENT_MAIN_CALLBACK_EXECUTION;
         }))
     );
-
 
     /**
      * @name /users
@@ -137,16 +110,16 @@ use SMU\Services\User as UserServices;
              *
              * @param int id
              */
-            $validator = new Validator($request);
-            $validatorResponse = $validator
+            $validator       = new Validator($request);
+            $validatorResult = $validator
                 ->param('id')->isOptional(false)->withMessage('Must have this parameter')->isEmail()
                 ->validate();
 
             /**
              * Validation error response...
              */
-            if ($validatorResponse->thereIsErrors()) {
-                $response->sendValidationErrorResponse($validatorResponse);
+            if ($validatorResult->getResponse()->thereIsErrors()) {
+                $response->sendValidationErrorResponse($validatorResult->getResponse());
                 return;
             }
         }))->middleware((function (Request $request, Response $response) {
@@ -160,11 +133,11 @@ use SMU\Services\User as UserServices;
      * @APIDOC
      * - @description remove an user.
      *
-     * - @method PUT
+     * - @method PATCH
      *
      * - @returns message
-     */    
-     Router::put(
+     */
+    Router::patch(
         (new Route('/users'))->callback((function (Request $request, Response $response) {
             /**
              * @ExpectedParams
@@ -174,15 +147,15 @@ use SMU\Services\User as UserServices;
              * @param string email <optional>
              */
             $validator = new Validator($request);
-            $validatorResponse = $validator
+            $validationResult = $validator
                 ->param('id')->isOptional(false)->withMessage('Must have this parameter')->isEmail()
                 ->validate();
 
             /**
              * Validation error response...
              */
-            if ($validatorResponse->thereIsErrors()) {
-                $response->sendValidationErrorResponse($validatorResponse);
+            if ($validationResult->getResponse()->thereIsErrors()) {
+                $response->sendValidationErrorResponse($validationResult->getResponse());
                 return;
             }
         }))->middleware((function (Request $request, Response $response) {
@@ -190,3 +163,65 @@ use SMU\Services\User as UserServices;
         }))
     );
 })();
+
+/**
+ * Private functions...
+ */ 
+
+/** 
+ * @ExpectedParams in query Request
+ * 
+ * @param int id          <optional>
+ * @param int nb_of_rows  <optional>
+ * @param int offset      <optional>
+ * 
+ * @return ValidatorResult
+ */
+function _validateParamsGetUsers(Request $request): ValidatorResult
+{
+    $validator = new Validator($request);
+    return $validator
+        ->param('id')->isOptional(false)->isInteger()->withMessage('Must be an integer!')
+        ->param('nb_of_rows')->isOptional()->isInteger()->withMessage('Must be an integer!')
+        ->param('offset')->isOptional()->isInteger()->withMessage('Must be an integer!')
+        ->validate();
+}
+
+/**
+ * @ExpectedParams in body Request
+ *
+ * @param string email
+ * @param string password
+ * @param string name
+ * @param string address
+ * 
+ * @return ValidatorResult
+ */
+function _validateParamsPostUsers(Request $request): ValidatorResult
+{
+    $validator = new Validator($request);
+    return $validator
+        //Query params..
+        
+        //Body params...
+        ->param('email')->isOptional(false)->withMessage('Must have this parameter')->isEmail()
+        ->param('password')->isOptional(false)->withMessage('Must have this parameter')->isString()
+        ->param('name')->isOptional(false)->withMessage('Must have this parameter')->isString()
+        ->param('address')->isOptional(false)->withMessage('Must have this parameter')->isString()
+        ->validate();
+}
+
+/**
+ * @ExpectedParams in query Request
+ *
+ * @param int id
+ * 
+ * @return ValidatorResult
+ */
+function _validateParamsDeleteUsers(Request $request): ValidatorResult
+{
+    $validator = new Validator($request);
+    return $validator
+        ->param('id')->isOptional(false)->withMessage('Must have this parameter!')->isInteger()
+        ->validate();
+}
