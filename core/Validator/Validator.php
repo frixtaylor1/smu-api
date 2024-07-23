@@ -60,9 +60,11 @@ class Validator
     private $request;
     private $lastParamName;
     private $lastIndexScheme;
-    private $validationSqueme = [];
-    private $errorsCounter    = 0;
-    private $errors           = [];
+    private $onlyParams         = [];
+    private $exceptParams       = [];
+    private $validationSqueme   = [];
+    private $errors             = [];
+    private $errorsCounter      = 0;
 
     public function __construct(Request $request)
     {
@@ -109,6 +111,7 @@ class Validator
         if (isset($this->validationSqueme[$this->lastParamName]['optional'])) {
             throw new Error('You cannot redefine the optional flag twice.');
         }
+        $this->exceptParams[] = $this->lastParamName;
         $this->lastIndexScheme = 'optional';
         $this->validationSqueme[$this->lastParamName]['optional'] = ['value' => $value];
         return $this;
@@ -123,6 +126,15 @@ class Validator
         $this->validationSqueme[$this->lastParamName][$this->lastIndexScheme]['message'] = $message;
         return $this;
     }
+    
+    /**
+     * @todo  MUST IMPLEMENT only method for params query and body validator...  
+     */
+    public function only(array $acceptedParams): self
+    {
+        $this->onlyParams = $acceptedParams;
+        return $this;
+    }
   
     public function validate(): ValidatorResult
     {
@@ -133,36 +145,36 @@ class Validator
         if ($responsePreValidation) {
             return $responsePreValidation;
         }
-       
+        
         if ($params) {
             foreach ($this->validationSqueme as $key => $scheme) {
-                $value               = $params[$key] ?? null;
-                $type                = gettype($value);
-                $isOptional          = $scheme['optional']['value'];
-                $schemeValidatorType = $scheme['type']['value'];
-                
-                if ($isOptional && !$value && !isset($params[$key])) {
+                $value = $params[$key] ?? null;
+                $isOptional = $scheme['optional']['value'];
+                $expectedType = $scheme['type']['value'];
+        
+                if ($isOptional && $value === null && !isset($params[$key])) {
                     continue;
                 }
-                
-                if (!$isOptional && !$value) {
+        
+                if (!$isOptional && $value === null) {
                     $this->errors[$key] = [
                         'message' => $scheme['optional']['message']
                     ];
                     $this->errorsCounter++;
                     continue;
-                }                
-                
-                $this->castTypes($schemeValidatorType, $value, $type);
-
-                if ($type !== $schemeValidatorType || (isset($params[$key])) && !$value) {
-                    $this->errorsCounter++;
+                }
+        
+                $actualType = gettype($value);
+                $this->castTypes($expectedType, $value, $actualType);
+        
+                if ($actualType !== $expectedType || ($actualType === 'NULL' && isset($params[$key]))) {
                     $this->errors[$key]['type'] = [
-                        'message' => $scheme['type']['message'] ?? "Invalid type, expected {$schemeValidatorType}",
+                        'message' => $scheme['type']['message'] ?? "Invalid type, expected {$expectedType}",
                     ];
+                    $this->errorsCounter++;
                     continue;
-                } 
-
+                }
+        
                 $validatedParams[$key] = $value;
             }
         }
@@ -245,6 +257,18 @@ class Validator
 
         if (count($this->validationSqueme) == 0) {
             $errorMessage = 'No validation scheme defined';
+        }
+
+        if (count($this->onlyParams)) {
+            $paramKeys = array_keys($params);            
+            if ($this->onlyParams !== $paramKeys) {
+                $diffParam = array_diff($paramKeys, $this->onlyParams);
+                foreach ($diffParam as $param) {
+                    if (!in_array($param, $this->exceptParams)) {
+                        $errorMessage = 'The params aren\'t correct';
+                    }
+                }
+            }
         }
 
         if ($errorMessage !== '') {

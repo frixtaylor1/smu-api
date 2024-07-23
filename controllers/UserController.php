@@ -147,7 +147,8 @@ use SMU\Services\User as UserServices;
              */
             $validator = new Validator($request);
             $validationResult = $validator
-                ->param('id')->isOptional(false)->withMessage('Must have this parameter')->isEmail()
+                ->only(['id'])
+                ->param('id')->isOptional(false)->withMessage('Must have this parameter')->isInteger()
                 ->validate();
 
             /**
@@ -180,8 +181,8 @@ function _validateParamsGetUsers(Request $request): ValidatorResult
 {
     $validator = new Validator($request);
     return $validator
+        ->only(['id', 'offset'])
         ->param('id')->isOptional()->isInteger()->withMessage('Must be an integer!')
-        ->param('nb_of_rows')->isOptional()->isInteger()->withMessage('Must be an integer!')
         ->param('offset')->isOptional()->isInteger()->withMessage('Must be an integer!')
         ->validate();
 }
@@ -200,6 +201,7 @@ function _validateParamsPostUsers(Request $request): ValidatorResult
 {
     $validator = new Validator($request);
     return $validator
+        ->only(['email', 'password', 'name', 'address'])
         //Query params..
         
         //Body params...
@@ -221,6 +223,7 @@ function _validateParamsDeleteUsers(Request $request): ValidatorResult
 {
     $validator = new Validator($request);
     return $validator
+        ->only(['id'])
         ->param('id')->isOptional(false)->withMessage('Must have this parameter!')->isInteger()
         ->validate();
 }
